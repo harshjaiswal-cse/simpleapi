@@ -2,7 +2,7 @@
 
 name: Deploy to VM
 
-# Yeh workflow 'main' branch par push karne par trigger hoga 
+# Yeh workflow 'main' branch par push karne par trigger hoga
 on:
   push:
     branches:
@@ -13,22 +13,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Code ko runner par download karein [cite: 21]
+      # Step 1: Code ko runner par download karein
       - name: Check out code
         uses: actions/checkout@v3
 
-      # Step 2: Node.js setup karein
+      # Step 2: Node.js setup karein (runner ke liye)
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18' # Aap koi bhi stable version use kar sakte hain
+          node-version: '18'
 
-      # Step 3: Dependencies install karein (npm install) [cite: 22]
+      # Step 3: Dependencies install karein (runner par)
       - name: Install dependencies
         run: npm install
 
-      # Step 4: Sabhi files (node_modules sahit) ko VM par copy karein [cite: 23]
-      # Hum 'scp' ka upyog kar rahe hain kyunki VM par 'git pull' mana hai [cite: 32]
+      # Step 4: Sabhi files (node_modules sahit) ko VM par copy karein
       - name: Copy files to VM via scp
         uses: appleboy/scp-action@master
         with:
@@ -39,7 +38,7 @@ jobs:
           target: "/home/azureuser/app" # VM par 'app' naam ka folder
           strip_components: 1
 
-      # Step 5: VM par connect karke app ko setup aur restart karein [cite: 23]
+      # Step 5: VM par connect karke app ko setup aur restart karein
       - name: Setup and Restart app on VM
         uses: appleboy/ssh-action@master
         with:
@@ -47,22 +46,27 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # VM par zaroori tools install karein (pm2 aur authbind)
+            # VM par zaroori tools (curl aur authbind) install karein
             sudo apt-get update
-            sudo apt-get install -y authbind
-            sudo npm install -g pm2
+            sudo apt-get install -y authbind curl
+            
+            # Node.js aur npm ko VM par install karein (Node 18 version)
+            curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+            sudo apt-get install -y nodejs
 
-            # Port 80 (privileged port) par chalane ke liye 'authbind' ko configure karein [cite: 10]
+            # Ab pm2 install karein (ab 'npm' command mil jayegi)
+            sudo npm install -g pm2
+            
+            # Port 80 (privileged port) par chalane ke liye 'authbind' ko configure karein
             sudo touch /etc/authbind/byport/80
             sudo chown azureuser /etc/authbind/byport/80
             sudo chmod 700 /etc/authbind/byport/80
-
+            
             # App directory mein jaayein
             cd /home/azureuser/app
-
+            
             # App ko 'pm2' aur 'authbind' se restart ya start karein
-            # 'authbind --deep' Node.js ko port 80 use karne ki permission deta hai
             authbind --deep pm2 restart index.js || authbind --deep pm2 start index.js
-
+            
             # pm2 ko save karein taaki VM restart hone par app bhi start ho jaye
             pm2 save
