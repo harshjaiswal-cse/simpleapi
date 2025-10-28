@@ -65,8 +65,8 @@ jobs:
             # App directory mein jaayein
             cd /home/azureuser/app
             
-            # App ko 'pm2' aur 'authbind' se restart ya start karein
-            authbind --deep pm2 restart index.js || authbind --deep pm2 start index.js
+            # App ko 'pm2' aur 'authbind' se reload (zero-downtime) ya start karein
+            authbind --deep pm2 reload index.js || authbind --deep pm2 start index.js
             
             # pm2 ko save karein taaki VM restart hone par app bhi start ho jaye
             pm2 save
